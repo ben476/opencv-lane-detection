@@ -47,7 +47,10 @@ def display_lines(image, lines):
         for line in lines:
             x1, y1, x2, y2 = line
             #draw lines on a black image
-            cv2.line(lines_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
+            try:
+                cv2.line(lines_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
+            except:
+                print("error", line)
     return lines_image
 
 def average(image, lines):
@@ -124,12 +127,30 @@ while True:
     # cv2.imshow("Tracking", edges)
     # cv2.imshow(isolated)
 
+    # filter to blue lane lines
+    blue = cv2.inRange(frame, (70, 20, 0), (255, 90, 50))
+    red = cv2.inRange(frame, (0, 0, 100), (50, 50, 255))
+
+    # cv2.imshow("Tracking", red)
+    # cv2.imshow("Tracking blue", blue)
+
     #DRAWING LINES: (order of params) --> region of interest, bin size (P, theta), min intersections needed, placeholder array, 
-    lines = cv2.HoughLinesP(isolated, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
-    averaged_lines = average(copy, lines)
-    black_lines = display_lines(copy, averaged_lines)
+    blue_lines = cv2.HoughLinesP(blue, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
+    blue_averaged_lines = average(copy, blue_lines)
+    blue_black_lines = display_lines(copy, blue_averaged_lines)
     #taking wighted sum of original image and lane lines image
-    lanes = cv2.addWeighted(copy, 0.8, black_lines, 1, 1)
+    blue_lanes = cv2.addWeighted(copy, 0.8, blue_black_lines, 1, 1)
+
+    red_lines = cv2.HoughLinesP(red, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
+    red_averaged_lines = average(copy, red_lines)
+    red_black_lines = display_lines(copy, red_averaged_lines)
+    #taking wighted sum of original image and lane lines image
+    red_lanes = cv2.addWeighted(copy, 0.8, red_black_lines, 1, 1)
+
+    # combine the two images
+    lanes = cv2.addWeighted(blue_lanes, 0.8, red_lanes, 1, 1)
+
+
     cv2.imshow("Tracking", lanes)
 
     # Display FPS on frame
