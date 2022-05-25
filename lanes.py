@@ -40,22 +40,35 @@ def region(image):
     mask = cv2.bitwise_and(image, mask)
     return image
 
-def display_lines(image, lines):
+def display_lines(image: np.ndarray, lines: np.ndarray) -> np.ndarray:
     lines_image = np.zeros_like(image)
-    #make sure array isn't empty
     if lines is not None:
-        for line in lines:
+    #make sure array length is 2
+        if len(lines) != 2:
+            return image
+        # get middle line by averaging the two lines
+        line_one = lines[0]
+        line_two = lines[1]
+        # average
+        line_avg = np.mean( np.array([ line_one, line_two ]), axis=0 ).astype(np.int32)
+        to_draw = [line_avg, line_one, line_two]
+        print(type(line_avg[0]),type(line_two[0]))
+        for line in to_draw:
             x1, y1, x2, y2 = line
             #draw lines on a black image
-            try:
-                cv2.line(lines_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
-            except:
-                print("error", line)
+            # print(x1, y1, x2, y2)
+            # try:
+            cv2.line(lines_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
+            # except:	
+            #     print("error", x1, y1, x2, y2)
     return lines_image
 
 def average(image, lines):
     left = []
     right = []
+
+    # only take the two largest lines
+
 
     if lines is not None:
       for line in lines:
@@ -120,38 +133,39 @@ while True:
     # Calculate Frames per second (FPS)
     fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
 
-    copy = np.copy(frame)
-    edges = cv2.Canny(copy,50,150)
-    isolated = region(edges)
+    # copy = np.copy(frame)
+    # edges = cv2.Canny(copy,50,150)
 
     # cv2.imshow("Tracking", edges)
     # cv2.imshow(isolated)
 
     # filter to blue lane lines
-    blue = cv2.inRange(frame, (70, 20, 0), (255, 90, 50))
-    red = cv2.inRange(frame, (0, 0, 100), (50, 50, 255))
+
+    blue = cv2.inRange(frame, (140, 70, 0), (255, 160, 80))
+    edges = cv2.Canny(blue,50,150)
+    # red = cv2.inRange(frame, (0, 0, 50), (50, 50, 255))
 
     # cv2.imshow("Tracking", red)
     # cv2.imshow("Tracking blue", blue)
 
     #DRAWING LINES: (order of params) --> region of interest, bin size (P, theta), min intersections needed, placeholder array, 
-    blue_lines = cv2.HoughLinesP(blue, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
-    blue_averaged_lines = average(copy, blue_lines)
-    blue_black_lines = display_lines(copy, blue_averaged_lines)
+    blue_lines = cv2.HoughLinesP(edges, 2, np.pi/180, 100, np.array([]), minLineLength=60, maxLineGap=2)
+    blue_averaged_lines = average(edges, blue_lines)
+    blue_black_lines = display_lines(edges, blue_averaged_lines)
     #taking wighted sum of original image and lane lines image
-    blue_lanes = cv2.addWeighted(copy, 0.8, blue_black_lines, 1, 1)
+    blue_lanes = cv2.addWeighted(edges, 0.8, blue_black_lines, 1, 1)
 
-    red_lines = cv2.HoughLinesP(red, 2, np.pi/180, 100, np.array([]), minLineLength=40, maxLineGap=5)
-    red_averaged_lines = average(copy, red_lines)
-    red_black_lines = display_lines(copy, red_averaged_lines)
-    #taking wighted sum of original image and lane lines image
-    red_lanes = cv2.addWeighted(copy, 0.8, red_black_lines, 1, 1)
+    # red_lines = cv2.HoughLinesP(red, 2, np.pi/180, 100, np.array([]), minLineLength=60, maxLineGap=2)
+    # red_averaged_lines = average(copy, red_lines)
+    # red_black_lines = display_lines(copy, red_averaged_lines)
+    # #taking wighted sum of original image and lane lines image
+    # red_lanes = cv2.addWeighted(copy, 0.8, red_black_lines, 1, 1)
 
     # combine the two images
-    lanes = cv2.addWeighted(blue_lanes, 0.8, red_lanes, 1, 1)
+    # lanes = cv2.addWeighted(blue_lanes, 0.8, red_lanes, 1, 1)
 
 
-    cv2.imshow("Tracking", lanes)
+    cv2.imshow("Tracking", blue_lanes)
 
     # Display FPS on frame
     cv2.putText(frame, "FPS : " + str(int(fps)), (100,50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50,170,50), 2);
